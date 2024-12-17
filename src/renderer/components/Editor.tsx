@@ -5,7 +5,7 @@ import { EditorProvider, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Editor as TiptapEditor } from '@tiptap/core'
 import MenuBar from './MenuBar'
-import { useCallback, useState, useRef } from 'react'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import ollama from 'ollama'
 import { EditorView } from 'prosemirror-view'
 import { Extension } from '@tiptap/core'
@@ -23,7 +23,6 @@ const PredictionExtension = Extension.create({
             const { doc, selection } = state
             const decorations: Decoration[] = []
             
-            // Get the prediction from a shared state
             const prediction = (window as any).currentPrediction
 
             if (prediction) {
@@ -38,6 +37,16 @@ const PredictionExtension = Extension.create({
             }
 
             return DecorationSet.create(doc, decorations)
+          },
+          handleKeyDown: (view, event) => {
+            if (event.key !== 'Tab') {
+              window.dispatchEvent(new CustomEvent('clearPrediction'))
+            }
+            return false
+          },
+          handleClick: () => {
+            window.dispatchEvent(new CustomEvent('clearPrediction'))
+            return false
           }
         }
       })
@@ -78,7 +87,15 @@ const Editor = () => {
   const editorRef = useRef<TiptapEditor | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout>()
 
-  
+  useEffect(() => {
+    const clearPrediction = () => {
+      setPrediction('')
+      ;(window as any).currentPrediction = ''
+    }
+
+    window.addEventListener('clearPrediction', clearPrediction)
+    return () => window.removeEventListener('clearPrediction', clearPrediction)
+  }, [])
 
   const createPrompt = (contextText: string): string => {
     return `You are an expert writing assistant. Based on the text provided, continue writing in a coherent and grammatically correct manner. Start writing from the <CURSOR> tag. Only respond with the continuation of the sentence. 
