@@ -18,13 +18,13 @@
   position: relative;
 }
 
-.prediction-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  font-size: 0.9em;
+.inline-prediction {
   color: #666;
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.prediction-overlay {
+  display: none;
 } 

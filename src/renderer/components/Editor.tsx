@@ -8,11 +8,48 @@ import MenuBar from './MenuBar'
 import { useCallback, useState, useRef } from 'react'
 import ollama from 'ollama'
 import { EditorView } from 'prosemirror-view'
+import { Extension } from '@tiptap/core'
+import { Plugin } from 'prosemirror-state'
+import { Decoration, DecorationSet } from 'prosemirror-view'
+
+const PredictionExtension = Extension.create({
+  name: 'prediction',
+  
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          decorations: (state) => {
+            const { doc, selection } = state
+            const decorations: Decoration[] = []
+            
+            // Get the prediction from a shared state
+            const prediction = (window as any).currentPrediction
+
+            if (prediction) {
+              decorations.push(
+                Decoration.widget(selection.$head.pos, () => {
+                  const span = document.createElement('span')
+                  span.className = 'inline-prediction'
+                  span.textContent = prediction
+                  return span
+                })
+              )
+            }
+
+            return DecorationSet.create(doc, decorations)
+          }
+        }
+      })
+    ]
+  }
+})
 
 const extensions = [
   Color,
   TextStyle,
   ListItem,
+  PredictionExtension,
   StarterKit.configure({
     bulletList: {
       keepMarks: true,
@@ -91,6 +128,7 @@ Continuation:`;
 
         if (prediction && prediction.length > 0) {
           setPrediction(prediction)
+          ;(window as any).currentPrediction = prediction
         }
       }
     } catch (error) {
@@ -100,6 +138,7 @@ Continuation:`;
         setError('An unknown error occurred')
       }
       setPrediction('')
+      ;(window as any).currentPrediction = ''
     }
   }
 
@@ -108,36 +147,41 @@ Continuation:`;
     const state = editor.state;
     const { from } = state.selection;
 
-    const contextRange = 500; // Number of characters before and after the cursor
-    const docSize = state.doc.content.size;
-
-    // Calculate start and end positions for extracting context
-    const startPos = Math.max(0, from - contextRange);
-    const endPos = Math.min(docSize, from + contextRange);
-
-    // Extract text before and after the cursor
-    const textBeforeCursor = state.doc.textBetween(startPos, from, '\n', ' ');
-    const textAfterCursor = state.doc.textBetween(from, endPos, '\n', ' ');
-
-    // Insert the cursor marker
-    const contextText = `${textBeforeCursor}<CURSOR>${textAfterCursor}`;
-
+    // Clear existing timeout if there is one
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Conditions to decide whether to predict
+    // Clear prediction immediately when document changes
+    if (editor.state.tr.docChanged) {
+      setPrediction('');
+      ;(window as any).currentPrediction = '';
+      return; // Add return here to prevent unnecessary processing while typing
+    }
+
+    // Get context and set up new prediction request
+    const contextRange = 500;
+    const docSize = state.doc.content.size;
+    const startPos = Math.max(0, from - contextRange);
+    const endPos = Math.min(docSize, from + contextRange);
+    const textBeforeCursor = state.doc.textBetween(startPos, from, '\n', ' ');
+    const textAfterCursor = state.doc.textBetween(from, endPos, '\n', ' ');
+    const contextText = `${textBeforeCursor}<CURSOR>${textAfterCursor}`;
+
+    // Early return conditions - don't set up new prediction request
     if (
       !textBeforeCursor ||
       textBeforeCursor.length < 5 ||
       /[.!?]\s*$/.test(textBeforeCursor.trim())
     ) {
       setPrediction('');
+      ;(window as any).currentPrediction = '';
       return;
     }
 
+    // Wait for 500ms of no typing before making new prediction request
     timeoutRef.current = setTimeout(() => {
-      getPrediction(contextText); // Pass the context with the cursor marker
+      getPrediction(contextText);
     }, 500);
   }, []);
 
@@ -196,11 +240,6 @@ Continuation:`;
         {error && (
           <div className="error-overlay">
             {error}
-          </div>
-        )}
-        {prediction && (
-          <div className="prediction-overlay">
-            Press Tab to accept: {prediction}
           </div>
         )}
       </EditorProvider>
