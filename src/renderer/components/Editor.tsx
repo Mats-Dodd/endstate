@@ -50,6 +50,10 @@ const Editor = () => {
     
     Do not include any formatting or quotes in your response.
 
+    Be short, concise, and to the point.
+
+    Make sure to write in the same style as the text provided.
+
     Ensure that you write grammatically correct and coherent sentences.
 
 Text: "${contextText}"
