@@ -30,9 +30,9 @@ const initialContent = `
   Hi there,
 </h2>
 <p>
-  this is a <em>basic</em> example of <strong>Tiptap</strong>...
+  What will you write?
 </p>
-// ... rest of your content ...
+
 `
 
 const Editor = () => {
@@ -42,16 +42,22 @@ const Editor = () => {
   const timeoutRef = useRef<NodeJS.Timeout>()
 
   const createPrompt = (content: string): string => {
-    // Get the last few sentences for context (up to ~100 chars)
     const lastChars = content.slice(-100)
     const sentences = lastChars.split(/[.!?]\s+/)
     const lastSentence = sentences[sentences.length - 1]
 
-    // Create a more specific prompt for next word prediction including context
-    return `Context: "${lastSentence}"
-    Complete the following sentence with the next word only. Respond with just the word, no punctuation or explanation:
+    return `Context: ${lastSentence}
+    You are an expert writing assistant. You are given a sentence and you need to predict the next word and or complete the sentence as you would when writing. 
+    
+    It is up to you to determine if you should predict the next word or complete the sentence.  You should respond with just the sentence, make sure to include punctuation if you think it is needed.  
 
-Context: "${lastSentence}"
+    Ensure that your response is grammatically correct and coherent.
+
+    Ensure that if your response is the end of a sentance you have included punctuation.
+
+    Do not include qutoations or any other formatting.
+
+Context: ${lastSentence}
 Next word:`
   }
 
@@ -66,10 +72,8 @@ Next word:`
     try {
       setError(null)
       
-      // Get the prompt
       const prompt = createPrompt(content)
       
-      // Log the input prompt for debugging
       console.log('Input Prompt:', prompt)
       console.log('--------------------------------')
 
@@ -78,24 +82,21 @@ Next word:`
         prompt: prompt,
         stream: false,
         options: {
-          temperature: 0.3, // Lower temperature for more focused predictions
-          top_k: 3,
-          num_predict: 3,
-          stop: ['.', '!', '?', '\n'], // Stop at sentence endings or newlines
+          temperature: 0.3, 
+          top_k: 10,
+          num_predict: 10,
+          stop: ['.', '!', '?', '\n'], 
         }
       })
       
       if (response.response) {
-        // Clean up the response
+  
         const prediction = response.response
           .trim()
-          .split(/[\s\n]/)[0] // Take only the first word
-          .replace(/[.,!?]$/, '') // Remove any trailing punctuation
+          .replace(/^"|"$/g, '');
         
-        // Log the predicted word for debugging
-        console.log('Predicted Word:', prediction)
+        console.log('Predicted Sentence:', prediction);
 
-        // Only show prediction if it's a valid word
         if (prediction && prediction.length > 0) {
           setPrediction(prediction)
         }
@@ -134,16 +135,46 @@ Next word:`
     }, 500)
   }, [])
 
-  const handleKeyDown = useCallback((view: EditorView, event: KeyboardEvent) => {
-    if (event.key === 'Tab' && prediction && editorRef.current) {
-      event.preventDefault()
-      // Insert the prediction followed by a space
-      editorRef.current.commands.insertContent(`${prediction} `) // Add a space after the prediction
-      setPrediction('')
-      return true // Indicate that we've handled the event
-    }
-    return false // Let other handlers process the event
-  }, [prediction])
+  const handleKeyDown = useCallback(
+    (view: EditorView, event: KeyboardEvent) => {
+      if (event.key === 'Tab' && prediction && editorRef.current) {
+        event.preventDefault()
+
+        const { state, commands } = editorRef.current
+        const { from } = state.selection
+
+        // Get text before the cursor
+        const textBeforeCursor = state.doc.textBetween(0, from, '\n', ' ')
+
+        // Use regex to find the last word (partial word)
+        const match = /(?:^|\s)(\S+)$/.exec(textBeforeCursor)
+
+        if (match) {
+          const word = match[1]
+          const wordStart = from - word.length
+
+          // Replace partial word with the full predicted sentence
+          commands.command(({ tr }) => {
+            tr.insertText(prediction + ' ', wordStart, from)
+            return true
+          })
+
+          setPrediction('')
+          return true
+        } else {
+          // If no partial word is found, simply insert the prediction
+          commands.command(({ tr }) => {
+            tr.insertText(prediction + ' ', from);
+            return true;
+          });
+          setPrediction('');
+          return true;
+        }
+      }
+      return false
+    },
+    [prediction]
+  )
 
   return (
     <div className="editor-wrapper">
