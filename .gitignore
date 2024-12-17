@@ -1,0 +1,45 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+release/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor specific files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Other files to ignore
+*.iml
+*.hprof
+*.orig
+*.pyc
+*.pyo
+*.rbc
+*.swp
+*.pdb
+*.lock
+*.map
+
+# ollama
+ollama/
+
+# Parcel cache
+.parcel-cache/

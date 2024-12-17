@@ -1,0 +1,70 @@
+{
+  "name": "endstate",
+  "version": "1.0.0",
+  "description": "The modern way to write",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "start": "concurrently \"npm run start:renderer\" \"wait-on http://localhost:4000 && npm run start:main\"",
+    "start:main": "tsc -p . && electron .",
+    "start:renderer": "parcel serve src/renderer/index.html --port 4000",
+    "build": "parcel build src/renderer/index.html && tsc -p . && electron-builder",
+    "dev": "tsc -w"
+  },
+  "build": {
+    "appId": "com.electron.endstate",
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.0.0",
+    "@tiptap/extension-color": "^2.10.3",
+    "@tiptap/extension-list-item": "^2.10.3",
+    "@tiptap/extension-text-style": "^2.10.3",
+    "@tiptap/pm": "^2.0.0",
+    "@tiptap/react": "^2.0.0",
+    "@tiptap/starter-kit": "^2.0.0",
+    "electron-is-dev": "^2.0.0",
+    "ollama": "^0.5.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@parcel/config-default": "^2.13.3",
+    "@parcel/packager-css": "^2.13.3",
+    "@parcel/packager-js": "^2.13.3",
+    "@parcel/packager-ts": "^2.13.3",
+    "@parcel/transformer-sass": "^2.13.3",
+    "@parcel/transformer-typescript-tsc": "^2.13.3",
+    "@types/electron": "^1.6.10",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "concurrently": "^9.1.0",
+    "crypto-browserify": "^3.12.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "events": "^3.3.0",
+    "os-browserify": "^0.3.0",
+    "parcel": "^2.13.3",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vm-browserify": "^1.1.2",
+    "wait-on": "^8.0.1"
+  },
+  "targets": {
+    "main": false,
+    "renderer": {
+      "source": "src/renderer/index.html",
+      "context": "browser"
+    }
+  }
+}

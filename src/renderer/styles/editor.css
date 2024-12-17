@@ -1,0 +1,30 @@
+.editor-container {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.ProseMirror {
+  outline: none;
+  min-height: 100px;
+}
+
+.ProseMirror p {
+  margin: 1em 0;
+}
+
+.editor-wrapper {
+  position: relative;
+}
+
+.prediction-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: #666;
+} 

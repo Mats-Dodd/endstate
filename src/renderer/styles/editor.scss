@@ -1,0 +1,68 @@
+.ProseMirror {
+  > * + * {
+    margin-top: 0.75em;
+  }
+
+  outline: none;
+  min-height: 100px;
+  padding: 1rem;
+}
+
+.control-group {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ccc;
+  
+  .button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    
+    button {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.5rem;
+      background: white;
+      cursor: pointer;
+      
+      &:hover {
+        background: #f0f0f0;
+      }
+      
+      &.is-active {
+        background: #e0e0e0;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// Basic content styles
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h3 { font-size: 1.17em; }
+h4 { font-size: 1em; }
+h5 { font-size: 0.83em; }
+h6 { font-size: 0.67em; }
+
+pre {
+  background: #0D0D0D;
+  color: #FFF;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  
+  code {
+    color: inherit;
+    padding: 0;
+    background: none;
+    font-size: 0.8rem;
+  }
+}
+
+blockquote {
+  padding-left: 1rem;
+  border-left: 2px solid #0D0D0D;
+} 

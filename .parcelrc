@@ -1,0 +1,12 @@
+{
+  "extends": "@parcel/config-default",
+  "transformers": {
+    "*.{ts,tsx}": ["@parcel/transformer-typescript-tsc"]
+  },
+  "resolvers": ["@parcel/resolver-default"],
+  "packagers": {
+    "*.{ts,tsx}": "@parcel/packager-ts",
+    "*.{js,mjs,cjs}": "@parcel/packager-js",
+    "*.css": "@parcel/packager-css"
+  }
+} 
