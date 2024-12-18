@@ -18,9 +18,8 @@
   position: relative;
 }
 
+.ProseMirror .inline-prediction,
 .inline-prediction {
-  color: #666;
-  opacity: 0.6;
   pointer-events: none;
   user-select: none;
 }

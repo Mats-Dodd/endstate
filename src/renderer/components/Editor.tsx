@@ -29,6 +29,8 @@ const PredictionExtension = Extension.create({
               decorations.push(
                 Decoration.widget(selection.$head.pos, () => {
                   const span = document.createElement('span')
+                  span.style.color = '#666'
+                  span.style.fontStyle = 'italic'
                   span.className = 'inline-prediction'
                   span.textContent = prediction
                   return span
