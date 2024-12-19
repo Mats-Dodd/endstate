@@ -74,14 +74,111 @@ const extensions = [
 ]
 
 const initialContent = `
-<h2>
-  Hi there,
-</h2>
 <p>
   What will you write?
 </p>
-
 `
+
+const findSentenceContainingCursor = (text: string, cursorPosition: number): [number, number] => {
+  const sentenceEndings = /[.!?]/;
+  
+  let sentenceStart = cursorPosition;
+  let sentenceEnd = cursorPosition;
+  
+  // Move backwards to find start of sentence
+  while (sentenceStart > 0) {
+    if (sentenceEndings.test(text[sentenceStart - 1])) {
+      sentenceStart++;
+      break;
+    }
+    sentenceStart--;
+  }
+  
+  // Move forwards to find end of sentence
+  while (sentenceEnd < text.length) {
+    if (sentenceEndings.test(text[sentenceEnd])) {
+      sentenceEnd++;
+      break;
+    }
+    sentenceEnd++;
+  }
+
+  return [sentenceStart, sentenceEnd];
+};
+
+const extractContexts = (text: string, cursorPosition: number): {
+  previousContext: string;
+  currentSentence: string;
+  followingContext: string;
+} => {
+  const [sentenceStart, sentenceEnd] = findSentenceContainingCursor(text, cursorPosition);
+
+  let currentSentence = text.slice(sentenceStart, sentenceEnd);
+  // Normalize internal whitespace so there are no extra newlines
+  currentSentence = currentSentence.replace(/\s+/g, ' ').trim();
+
+  const textWithoutCursor = text.replace('<CURSOR>', '');
+
+  const textBeforeSentence = textWithoutCursor.slice(0, sentenceStart);
+  const wordsBefore = textBeforeSentence.split(/\s+/);
+  const previousWords = wordsBefore.length > 500
+    ? wordsBefore.slice(wordsBefore.length - 500)
+    : wordsBefore;
+  const previousContext = previousWords.join(' ').trim();
+
+  const textAfterSentence = textWithoutCursor.slice(sentenceEnd);
+  const followingContext = textAfterSentence.slice(0, 500).trim();
+
+  return {
+    previousContext,
+    currentSentence,
+    followingContext,
+  };
+};
+
+const createPrompt = (contextText: string): string => {
+  const cursorPosition = contextText.indexOf('<CURSOR>');
+  const { previousContext, currentSentence, followingContext } = 
+    extractContexts(contextText, cursorPosition);
+
+  const prompt = `
+  <purpose>
+    You are an expert writing assistant, help the user complete the sentance from the <CURSOR> tag.
+  </purpose>
+
+  <instructions>
+    <instruction>
+      Do not include any formatting or quotes in your response.
+    </instruction>
+    <instruction>
+      Only respond with at most ONE sentance.
+    </instruction>
+    <instruction>
+      If the <CURSOR> is in the middle of an uncompleted word, complete the word.
+    </instruction>
+    <instruction>
+      Keep your response concise and to the point, do not include any additional information.
+    </instruction>
+  </instructions>
+
+  <content>
+    <previous_context>
+      ${previousContext}
+    </previous_context>
+
+    <following_context>
+      ${followingContext}
+    </following_context>
+
+    <current_sentence>
+      ${currentSentence}
+    </current_sentence>
+  </content>
+
+  Continuation:`;
+
+  return prompt;
+};
 
 const Editor = () => {
   const [prediction, setPrediction] = useState('')
@@ -99,31 +196,17 @@ const Editor = () => {
     return () => window.removeEventListener('clearPrediction', clearPrediction)
   }, [])
 
-  const createPrompt = (contextText: string): string => {
-    return `You are an expert writing assistant. Based on the text provided, continue writing in a coherent and grammatically correct manner. Start writing from the <CURSOR> tag. Only respond with the continuation of the sentence. 
-
-    ONLY RESPOND WITH THE CONTINUATION OF THE SENTENCE.
-    
-    Do not include any formatting or quotes in your response.
-
-    Be short, concise, and to the point.
-
-    Make sure to write in the same style as the text provided.
-
-    Ensure that you write grammatically correct and coherent sentences.
-
-Text: "${contextText}"
-Continuation:`;
-  }
-
   const getPrediction = async (contextText: string) => {
-    const model = 'llama3.2:3b'
+    const model = 'llama3.2:3b'    
 
     try {
       setError(null)
       console.log('Context:', contextText)
       console.log('--------------------------------')
       const prompt = createPrompt(contextText)
+
+      console.log('Prompt:', prompt)
+      console.log('--------------------------------')
 
       const response = await ollama.generate({
         model: model,
@@ -166,41 +249,33 @@ Continuation:`;
     const state = editor.state;
     const { from } = state.selection;
 
-    // Clear existing timeout if there is one
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Clear prediction immediately when document changes
+    // If doc changed recently, clear prediction
     if (editor.state.tr.docChanged) {
       setPrediction('');
-      ;(window as any).currentPrediction = '';
-      return; // Add return here to prevent unnecessary processing while typing
-    }
-
-    // Get context and set up new prediction request
-    const contextRange = 500;
-    const docSize = state.doc.content.size;
-    const startPos = Math.max(0, from - contextRange);
-    const endPos = Math.min(docSize, from + contextRange);
-    const textBeforeCursor = state.doc.textBetween(startPos, from, '\n', ' ');
-    const textAfterCursor = state.doc.textBetween(from, endPos, '\n', ' ');
-    const contextText = `${textBeforeCursor}<CURSOR>${textAfterCursor}`;
-
-    // Early return conditions - don't set up new prediction request
-    if (
-      !textBeforeCursor ||
-      textBeforeCursor.length < 5 ||
-      /[.!?]\s*$/.test(textBeforeCursor.trim())
-    ) {
-      setPrediction('');
-      ;(window as any).currentPrediction = '';
+      (window as any).currentPrediction = '';
       return;
     }
 
-    // Wait for 500ms of no typing before making new prediction request
+    const docSize = state.doc.content.size;
+    const startPos = Math.max(0, from - 1000);
+    const endPos = Math.min(docSize, from + 1000);
+    const contextText = state.doc.textBetween(startPos, endPos, '\n', ' ');
+    const cursorPosition = from - startPos;
+
+    if (!contextText || contextText.length < 5) {
+      setPrediction('');
+      (window as any).currentPrediction = '';
+      return;
+    }
+
     timeoutRef.current = setTimeout(() => {
-      getPrediction(contextText);
+      const contextWithCursor = 
+        contextText.slice(0, cursorPosition) + '<CURSOR>' + contextText.slice(cursorPosition);
+      getPrediction(contextWithCursor);
     }, 500);
   }, []);
 
@@ -208,35 +283,47 @@ Continuation:`;
     (view: EditorView, event: KeyboardEvent) => {
       if (event.key === 'Tab' && prediction && editorRef.current) {
         event.preventDefault();
-
+  
         const { state, commands } = editorRef.current;
         const { from } = state.selection;
-
+  
         // Get text before the cursor
-        const textBeforeCursor = state.doc.textBetween(0, from, '\n', ' ');
-
-        // Use regex to find the last word before the cursor
-        const lastWordMatch = /(\S+)\s*$/.exec(textBeforeCursor);
-        const lastWord = lastWordMatch ? lastWordMatch[1] : '';
-
-        // Get the first word of the prediction
-        const firstWordMatch = /^\s*(\S+)/.exec(prediction);
-        const firstWord = firstWordMatch ? firstWordMatch[1] : '';
-
-        let adjustedPrediction = prediction;
-
-        // If the last word before the cursor matches the first word of prediction, remove the duplication
-        if (lastWord && firstWord && lastWord.toLowerCase() === firstWord.toLowerCase()) {
-          // Remove the first word from the prediction
-          adjustedPrediction = prediction.slice(firstWord.length).trimStart();
+        const textBeforeCursor = state.doc.textBetween(0, from, '\n', ' ').trim();
+        let adjustedPrediction = prediction.trim();
+  
+        // Split both typed text and prediction into words
+        const typedWords = textBeforeCursor.split(/\s+/);
+        const predictionWords = adjustedPrediction.split(/\s+/);
+  
+        // We will attempt to find the largest suffix of typedWords that 
+        // matches the prefix of predictionWords.
+        let overlapCount = 0;
+        const maxOverlap = Math.min(typedWords.length, predictionWords.length);
+  
+        for (let i = maxOverlap; i > 0; i--) {
+          const typedSuffix = typedWords.slice(typedWords.length - i).join(' ').toLowerCase();
+          const predictionPrefix = predictionWords.slice(0, i).join(' ').toLowerCase();
+  
+          if (typedSuffix === predictionPrefix) {
+            overlapCount = i;
+            break;
+          }
         }
-
-        // Insert adjusted prediction at the cursor position
+  
+        // If there is an overlap, remove those overlapped words from the prediction
+        if (overlapCount > 0) {
+          adjustedPrediction = predictionWords.slice(overlapCount).join(' ');
+        }
+  
+        // If there's still a partial word scenario (optional, if you need it):
+        // Check if you're in the middle of a word and if so, handle it as per your current logic.
+        // (Your existing partial word logic can remain here if needed.)
+  
         commands.command(({ tr }) => {
-          tr.insertText(adjustedPrediction + ' ', from);
+          tr.insertText(adjustedPrediction + ' ', tr.selection.from);
           return true;
         });
-
+  
         setPrediction('');
         return true;
       }
@@ -244,6 +331,7 @@ Continuation:`;
     },
     [prediction]
   );
+  
 
   return (
     <div className="editor-wrapper">
@@ -266,4 +354,4 @@ Continuation:`;
   )
 }
 
-export default Editor 
+export default Editor
