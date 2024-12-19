@@ -197,17 +197,11 @@ const Editor = () => {
   }, [])
 
   const getPrediction = async (contextText: string) => {
-    const model = 'llama3.2:3b'    
+    const model = 'mistral-nemo'
 
     try {
       setError(null)
-      console.log('Context:', contextText)
-      console.log('--------------------------------')
       const prompt = createPrompt(contextText)
-
-      console.log('Prompt:', prompt)
-      console.log('--------------------------------')
-
       const response = await ollama.generate({
         model: model,
         prompt: prompt,
@@ -221,21 +215,18 @@ const Editor = () => {
       })
 
       if (response.response) {
-        const prediction = response.response
+        const newPrediction = response.response
           .trim()
           .replace(/^"|"$/g, '')
 
-        console.log('Prediction:', prediction)
-        console.log('--------------------------------')
-
-        if (prediction && prediction.length > 0) {
-          setPrediction(prediction)
-          ;(window as any).currentPrediction = prediction
+        if (newPrediction && newPrediction.length > 0) {
+          setPrediction(newPrediction)
+          ;(window as any).currentPrediction = newPrediction
         }
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(`Error: ${error.message}. Make sure Ollama is running and a model is installed.`)
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(`Error: ${err.message}. Make sure Ollama is running and a model is installed.`)
       } else {
         setError('An unknown error occurred')
       }
@@ -279,59 +270,99 @@ const Editor = () => {
     }, 500);
   }, []);
 
+  const getActiveSentenceAndTypedText = (editor: TiptapEditor) => {
+    const { from } = editor.state.selection
+    const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ')
+
+    const sentenceEndings = /[.!?]/;
+    let sentenceStart = from;
+    let sentenceEnd = from;
+
+    while (sentenceStart > 0) {
+      if (sentenceEndings.test(docText[sentenceStart - 1])) {
+        sentenceStart++;
+        break;
+      }
+      sentenceStart--;
+    }
+
+    while (sentenceEnd < docText.length) {
+      if (sentenceEndings.test(docText[sentenceEnd])) {
+        sentenceEnd++;
+        break;
+      }
+      sentenceEnd++;
+    }
+
+    const activeSentence = docText.slice(sentenceStart, sentenceEnd).trim();
+    const typedInSentence = docText.slice(sentenceStart, from).replace(/\s+/g, ' ').trimRight();
+
+    return { activeSentence, typedInSentence };
+  };
+
+  const longestCommonPrefix = (a: string, b: string): string => {
+    let i = 0;
+    const minLen = Math.min(a.length, b.length);
+    while (i < minLen && a[i].toLowerCase() === b[i].toLowerCase()) {
+      i++;
+    }
+    return a.slice(0, i);
+  };
+
   const handleKeyDown = useCallback(
     (view: EditorView, event: KeyboardEvent) => {
       if (event.key === 'Tab' && prediction && editorRef.current) {
         event.preventDefault();
-  
-        const { state, commands } = editorRef.current;
-        const { from } = state.selection;
-  
-        // Get text before the cursor
-        const textBeforeCursor = state.doc.textBetween(0, from, '\n', ' ').trim();
-        let adjustedPrediction = prediction.trim();
-  
-        // Split both typed text and prediction into words
-        const typedWords = textBeforeCursor.split(/\s+/);
-        const predictionWords = adjustedPrediction.split(/\s+/);
-  
-        // We will attempt to find the largest suffix of typedWords that 
-        // matches the prefix of predictionWords.
-        let overlapCount = 0;
-        const maxOverlap = Math.min(typedWords.length, predictionWords.length);
-  
-        for (let i = maxOverlap; i > 0; i--) {
-          const typedSuffix = typedWords.slice(typedWords.length - i).join(' ').toLowerCase();
-          const predictionPrefix = predictionWords.slice(0, i).join(' ').toLowerCase();
-  
-          if (typedSuffix === predictionPrefix) {
-            overlapCount = i;
-            break;
-          }
+
+        const editor = editorRef.current;
+        const { typedInSentence, activeSentence } = getActiveSentenceAndTypedText(editor);
+
+        let typed = typedInSentence.replace(/\s+/g, ' ').trimRight();
+        let predicted = prediction.replace(/\s+/g, ' ').trim();
+
+        // If the prediction matches exactly the active sentence, do not insert
+        if (predicted.toLowerCase() === activeSentence.toLowerCase()) {
+          setPrediction('');
+          (window as any).currentPrediction = '';
+          return true;
         }
-  
-        // If there is an overlap, remove those overlapped words from the prediction
-        if (overlapCount > 0) {
-          adjustedPrediction = predictionWords.slice(overlapCount).join(' ');
+
+        const prefix = longestCommonPrefix(typed, predicted);
+        let remainder = predicted.slice(prefix.length).trimLeft();
+
+        // If no remainder, no insertion needed
+        if (!remainder) {
+          setPrediction('');
+          (window as any).currentPrediction = '';
+          return true;
         }
-  
-        // If there's still a partial word scenario (optional, if you need it):
-        // Check if you're in the middle of a word and if so, handle it as per your current logic.
-        // (Your existing partial word logic can remain here if needed.)
-  
+
+        const typedEndsWithSpace = typed.endsWith(' ');
+        const remainderStartsWithSpace = remainder.startsWith(' ');
+
+        // Adjust spacing to avoid double spaces:
+        if (typedEndsWithSpace && remainderStartsWithSpace) {
+          // Remove extra spaces at the start of remainder
+          remainder = remainder.replace(/^ +/, '');
+        } else if (!typedEndsWithSpace && !remainderStartsWithSpace) {
+          // Add a space to separate words
+          remainder = ' ' + remainder;
+        }
+
+        const { commands } = editor;
         commands.command(({ tr }) => {
-          tr.insertText(adjustedPrediction + ' ', tr.selection.from);
+          tr.insertText(remainder, tr.selection.from);
           return true;
         });
-  
+
         setPrediction('');
+        (window as any).currentPrediction = '';
         return true;
       }
       return false;
     },
     [prediction]
   );
-  
 
   return (
     <div className="editor-wrapper">
