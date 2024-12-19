@@ -12,6 +12,7 @@ import { Extension } from '@tiptap/core'
 import { Plugin } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 
+
 const PredictionExtension = Extension.create({
   name: 'prediction',
   
@@ -56,6 +57,7 @@ const PredictionExtension = Extension.create({
   }
 })
 
+
 const extensions = [
   Color,
   TextStyle,
@@ -73,11 +75,13 @@ const extensions = [
   }),
 ]
 
+
 const initialContent = `
 <p>
   What will you write?
 </p>
 `
+
 
 const findSentenceContainingCursor = (text: string, cursorPosition: number): [number, number] => {
   const sentenceEndings = /[.!?]/;
@@ -105,6 +109,7 @@ const findSentenceContainingCursor = (text: string, cursorPosition: number): [nu
 
   return [sentenceStart, sentenceEnd];
 };
+
 
 const extractContexts = (text: string, cursorPosition: number): {
   previousContext: string;
@@ -136,6 +141,7 @@ const extractContexts = (text: string, cursorPosition: number): {
   };
 };
 
+
 const createPrompt = (contextText: string): string => {
   const cursorPosition = contextText.indexOf('<CURSOR>');
   const { previousContext, currentSentence, followingContext } = 
@@ -159,6 +165,9 @@ const createPrompt = (contextText: string): string => {
     <instruction>
       Keep your response concise and to the point, do not include any additional information.
     </instruction>
+    <instruction>
+      If the <CURSOR> Is alone by itself in <current_sentence> tag, This means the user has not typed anything yet, predict the next few words of the sentence to help them get started.
+    </instruction>
   </instructions>
 
   <content>
@@ -175,10 +184,20 @@ const createPrompt = (contextText: string): string => {
     </current_sentence>
   </content>
 
+  <instructions>
+    <instruction>
+      Predict the next few words of the <current_sentence> based on the <previous_context> and <following_context>.
+    </instruction>
+    <instruction>
+      Never repeat a sentance that is in the <previous_context>.
+    </instruction>
+  </instructions>
+
   Continuation:`;
 
   return prompt;
 };
+
 
 const Editor = () => {
   const [prediction, setPrediction] = useState('')
@@ -196,12 +215,39 @@ const Editor = () => {
     return () => window.removeEventListener('clearPrediction', clearPrediction)
   }, [])
 
+
   const getPrediction = async (contextText: string) => {
     const model = 'mistral-nemo'
+    const editor = editorRef.current
+    if (!editor) return
+    
+    const { typedInSentence, activeSentence } = getActiveSentenceAndTypedText(editor)
+    
+    // Find the start of current sentence
+    const { from } = editor.state.selection;
+    let sentenceStart = from;
+    const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ');
+    const sentenceEndings = /[.!?]/;
+    
+    while (sentenceStart > 0) {
+      if (sentenceEndings.test(docText[sentenceStart - 1])) {
+        sentenceStart++;
+        break;
+      }
+      sentenceStart--;
+    }
+
+    const previousSentence = getPreviousSentence(editor, sentenceStart);
+    // console.log('PREVIOUS SENTENCE:', previousSentence);
+    // console.log('TYPED IN SENTENCE', typedInSentence)
+    // console.log('ACTIVE SENTENCE', activeSentence)
+    // console.log('--------------------------------')
 
     try {
       setError(null)
       const prompt = createPrompt(contextText)
+      // console.log(prompt)
+      // console.log('--------------------------------')
       const response = await ollama.generate({
         model: model,
         prompt: prompt,
@@ -219,7 +265,31 @@ const Editor = () => {
           .trim()
           .replace(/^"|"$/g, '')
 
-        if (newPrediction && newPrediction.length > 0) {
+        // This checks if the prediction is the same as the active sentance
+        if (newPrediction.toLowerCase() === activeSentence.toLowerCase()) {
+          setPrediction('')
+          ;(window as any).currentPrediction = ''
+          return
+        }
+        // This checks if the prediction is the same as the previous sentence
+        if (newPrediction.toLowerCase() === previousSentence.toLowerCase()) {
+          setPrediction('')
+          ;(window as any).currentPrediction = ''
+          return
+        }
+        
+        const commonSubstring = longestCommonSubstring(activeSentence, newPrediction);
+        // console.log('COMMON SUBSTRING', commonSubstring)
+        // console.log('--------------------------------')
+        const remainder = newPrediction.slice(commonSubstring.length).trim();
+        console.log('REMAINDER IN PROMPT', remainder)
+        console.log('--------------------------------')
+
+        if (remainder.length > 0) {
+          setPrediction(remainder)
+          ;(window as any).currentPrediction = remainder
+        }
+        else {
           setPrediction(newPrediction)
           ;(window as any).currentPrediction = newPrediction
         }
@@ -234,6 +304,7 @@ const Editor = () => {
       ;(window as any).currentPrediction = ''
     }
   }
+
 
   const handleUpdate = useCallback(({ editor }: { editor: TiptapEditor }) => {
     editorRef.current = editor;
@@ -270,6 +341,7 @@ const Editor = () => {
     }, 500);
   }, []);
 
+
   const getActiveSentenceAndTypedText = (editor: TiptapEditor) => {
     const { from } = editor.state.selection
     const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ')
@@ -295,18 +367,62 @@ const Editor = () => {
     }
 
     const activeSentence = docText.slice(sentenceStart, sentenceEnd).trim();
-    const typedInSentence = docText.slice(sentenceStart, from).replace(/\s+/g, ' ').trimRight();
+    const typedInSentence = docText.slice(sentenceStart, from).replace(/\s+/g, ' ');
 
     return { activeSentence, typedInSentence };
   };
 
-  const longestCommonPrefix = (a: string, b: string): string => {
-    let i = 0;
-    const minLen = Math.min(a.length, b.length);
-    while (i < minLen && a[i].toLowerCase() === b[i].toLowerCase()) {
-      i++;
+  const longestCommonSubstring = (current_sentence: string, prediction: string): string => {
+    const m: number = current_sentence.length;
+    const n: number = prediction.length;
+    
+    const dp: number[][] = Array(m + 1).fill(0)
+        .map(() => Array(n + 1).fill(0));
+    
+    let maxLength: number = 0;
+    let endPosition: number = 0;
+    
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (current_sentence[i - 1] === prediction[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+                
+                if (dp[i][j] > maxLength) {
+                    maxLength = dp[i][j];
+                    endPosition = i;
+                }
+            }
+        }
     }
-    return a.slice(0, i);
+    const longestSubstring = current_sentence.substring(endPosition - maxLength, endPosition);
+    return longestSubstring;
+  };
+  
+
+  const getPreviousSentence = (editor: TiptapEditor, currentSentenceStart: number): string => {
+    const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ');
+    const sentenceEndings = /[.!?]/;
+    let previousSentenceEnd = currentSentenceStart;
+
+    while (previousSentenceEnd > 0) {
+      previousSentenceEnd--;
+      if (sentenceEndings.test(docText[previousSentenceEnd])) {
+        break;
+      }
+    }
+    if (previousSentenceEnd <= 0) {
+      return '';
+    }
+    let previousSentenceStart = previousSentenceEnd;
+    while (previousSentenceStart > 0) {
+      previousSentenceStart--;
+      if (sentenceEndings.test(docText[previousSentenceStart])) {
+        previousSentenceStart++;
+        break;
+      }
+    }
+
+    return docText.slice(previousSentenceStart, previousSentenceEnd + 1).trim();
   };
 
   const handleKeyDown = useCallback(
@@ -315,43 +431,62 @@ const Editor = () => {
         event.preventDefault();
 
         const editor = editorRef.current;
+    
         const { typedInSentence, activeSentence } = getActiveSentenceAndTypedText(editor);
-
-        let typed = typedInSentence.replace(/\s+/g, ' ').trimRight();
+        
+        let typed = typedInSentence.replace(/\s+/g, ' ').trim();
+        // console.log('TYPED', typed);
+        // console.log('--------------------------------');
         let predicted = prediction.replace(/\s+/g, ' ').trim();
+        // console.log('PREDICTED', predicted);
+        // console.log('--------------------------------');
 
-        // If the prediction matches exactly the active sentence, do not insert
-        if (predicted.toLowerCase() === activeSentence.toLowerCase()) {
+        // check if the last word of the active sentence is a partial word of the first word of the predicted
+        const activeSentenceLastWord = activeSentence.split(' ').pop()
+        // console.log('ACTIVE SENTENCE LAST WORD', activeSentenceLastWord)
+        const predictedFirstWord = predicted.split(' ')[0]
+        //  console.log('PREDICTED FIRST WORD', predictedFirstWord)
+        // console.log('--------------------------------')
+        if (activeSentenceLastWord && predictedFirstWord && activeSentenceLastWord.toLowerCase() === predictedFirstWord.toLowerCase().slice(0, activeSentenceLastWord.length)) {
+          // console.log('MATCH');
+          // console.log('PREDICTED', predicted.slice(activeSentenceLastWord.length));
+        
+          const newRemainder = predicted.slice(activeSentenceLastWord.length);
+          const remainder = newRemainder.trimStart();
+        
+          const { commands } = editor;
+        
+          commands.command(({ tr }) => {
+            tr.insertText(remainder, tr.selection.from);
+            return true;
+          });
+        
           setPrediction('');
           (window as any).currentPrediction = '';
           return true;
         }
 
-        const prefix = longestCommonPrefix(typed, predicted);
-        let remainder = predicted.slice(prefix.length).trimLeft();
-
-        // If no remainder, no insertion needed
-        if (!remainder) {
-          setPrediction('');
-          (window as any).currentPrediction = '';
-          return true;
-        }
-
+        // Check for partial word scenario:
+        // If typed ends with a letter and remainder starts with a letter,
+        // assume we are continuing the same word without adding a space.
+       
         const typedEndsWithSpace = typed.endsWith(' ');
-        const remainderStartsWithSpace = remainder.startsWith(' ');
+        console.log('TYPED ENDS WITH SPACE', typedEndsWithSpace)
+        const remainderStartsWithSpace = predicted.startsWith(' ');
+        console.log('REMAINDER STARTS WITH SPACE', remainderStartsWithSpace)
 
-        // Adjust spacing to avoid double spaces:
         if (typedEndsWithSpace && remainderStartsWithSpace) {
-          // Remove extra spaces at the start of remainder
-          remainder = remainder.replace(/^ +/, '');
+          console.log('REMOVING SPACE FROM PREDICTED BECAUSE OF SPACE IN BOTH', predicted)
+          predicted = predicted.replace(/^ +/, '');
         } else if (!typedEndsWithSpace && !remainderStartsWithSpace) {
-          // Add a space to separate words
-          remainder = ' ' + remainder;
+          predicted = ' ' + predicted;
+          console.log('ADDING SPACE TO PREDICTED BECAUSE OF NO SPACE IN BOTH', predicted)
         }
 
         const { commands } = editor;
         commands.command(({ tr }) => {
-          tr.insertText(remainder, tr.selection.from);
+          console.log('INSERTING', predicted)
+          tr.insertText(predicted, tr.selection.from);
           return true;
         });
 
