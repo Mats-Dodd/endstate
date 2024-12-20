@@ -1,5 +1,4 @@
 import { Editor as TiptapEditor } from '@tiptap/core'
-import { EditorView } from 'prosemirror-view'
 
 export interface EditorContexts {
   previousContext: string;

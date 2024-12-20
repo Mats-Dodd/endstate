@@ -32,7 +32,6 @@ export const createEditorHelpers = (): EditorHelpers => ({
     }
 
     const activeSentence = docText.slice(sentenceStart, sentenceEnd).trim()
-    // console.log('ACTIVE_SENTENCE', activeSentence)
 
     return activeSentence
   },

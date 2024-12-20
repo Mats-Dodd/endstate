@@ -1,11 +1,9 @@
-// Extract text processing functions from Editor.tsx
 export const findSentenceContainingCursor = (text: string, cursorPosition: number): [number, number] => {
   const sentenceEndings = /[.!?]/;
   
   let sentenceStart = cursorPosition;
   let sentenceEnd = cursorPosition;
   
-  // Move backwards to find start of sentence
   while (sentenceStart > 0) {
     if (sentenceEndings.test(text[sentenceStart - 1])) {
       sentenceStart++;
@@ -14,7 +12,6 @@ export const findSentenceContainingCursor = (text: string, cursorPosition: numbe
     sentenceStart--;
   }
   
-  // Move forwards to find end of sentence
   while (sentenceEnd < text.length) {
     if (sentenceEndings.test(text[sentenceEnd])) {
       sentenceEnd++;
