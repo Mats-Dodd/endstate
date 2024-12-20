@@ -16,11 +16,11 @@ export const handlePredictionResponse = (
   }
 
   const {bestMatch, activeSentenceIndices, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, newPrediction)
-  console.log('ACTIVE_SENTENCE', activeSentence)
-  console.log('NEW_PREDICTION', newPrediction)
-  console.log('FUZZY_MATCH', bestMatch)
-  console.log('ACTIVE_SENTENCE_INDICES', activeSentenceIndices)
-  console.log('NEW_PREDICTION_INDICES', newPredictionIndices)
+  // console.log('ACTIVE_SENTENCE', activeSentence)
+  // console.log('NEW_PREDICTION', newPrediction)
+  // console.log('FUZZY_MATCH', bestMatch)
+  // console.log('ACTIVE_SENTENCE_INDICES', activeSentenceIndices)
+  // console.log('NEW_PREDICTION_INDICES', newPredictionIndices)
 
   updatePrediction(newPrediction, setPrediction)
 }
