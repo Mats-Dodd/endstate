@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react'
 import { Editor as TiptapEditor } from '@tiptap/core'
-import { EditorState } from '../services/editor/types'
 
 export const useEditorState = () => {
   const [prediction, setPrediction] = useState('')
