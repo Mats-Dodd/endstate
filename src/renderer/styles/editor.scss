@@ -66,3 +66,33 @@ blockquote {
   padding-left: 1rem;
   border-left: 2px solid #0D0D0D;
 } 
+
+.editor-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  
+  .error-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #fee2e2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    z-index: 50;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .inline-prediction {
+    color: #666;
+    font-style: italic;
+    user-select: none;
+    pointer-events: none;
+  }
+}
+
+// Add any additional styles from editor.css if they're not already included
