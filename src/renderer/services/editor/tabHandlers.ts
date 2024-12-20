@@ -108,12 +108,12 @@ const predictionHandler = {
     const {bestMatch, activeSentenceIndices, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, prediction)
 
     if (bestMatch && activeSentenceIndices) {
-      console.log('ACTIVE_SENTENCE_INDICES', activeSentenceIndices)
-      console.log('BEST_MATCH', bestMatch)
+      // console.log('ACTIVE_SENTENCE_INDICES', activeSentenceIndices)
+      // console.log('BEST_MATCH', bestMatch)
       const editorText = editor.state.doc.textContent
       // console.log('EDITOR_TEXT', editorText)
       const activeSentenceStart = editorText.indexOf(activeSentence)
-      console.log('ACTIVE_SENTENCE_START', activeSentenceStart)
+      // console.log('ACTIVE_SENTENCE_START', activeSentenceStart)
 
       const absoluteStartIndex = activeSentenceStart + activeSentenceIndices[0]
 
@@ -122,7 +122,7 @@ const predictionHandler = {
       activeSentenceIndices[1] = absoluteEndIndex + 2
 
       const word_to_delete = editorText.slice(activeSentenceIndices[0], activeSentenceIndices[1])
-      console.log('WORD_TO_DELETE', word_to_delete)
+      // console.log('WORD_TO_DELETE', word_to_delete)
       predictionHandler.deleteText(editor, activeSentenceIndices)
     }
 

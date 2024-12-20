@@ -1,5 +1,7 @@
 import { AIPredictionResponse } from './types'
 import { fuzzyMatchSubstring } from '../../utils/stringMatch'
+import { normalize } from '../../utils/stringMatch'
+
 export const handlePredictionResponse = (
   response: AIPredictionResponse,
   activeSentence: string,
@@ -29,18 +31,22 @@ const isPredictionMatchingActiveSentence = (
   newPrediction: string,
   activeSentence: string
 ): boolean => {
-  // console.log('NEW_PREDICTION', newPrediction.toLowerCase())
-  // console.log('ACTIVE_SENTENCE', activeSentence.toLowerCase())
-  return newPrediction.toLowerCase() === activeSentence.toLowerCase()
+  const normNewPrediction = normalize(newPrediction)
+  const normActiveSentence = normalize(activeSentence)
+  console.log('NEW_PREDICTION', normNewPrediction)
+  console.log('ACTIVE_SENTENCE', normActiveSentence)
+  return normNewPrediction === normActiveSentence
 }
 
 const isPredictionMatchingPreviousSentence = (
   newPrediction: string, 
   previousSentence: string
 ): boolean => {
-  // console.log('NEW_PREDICTION', newPrediction.toLowerCase())
-  // console.log('PREVIOUS_SENTENCE', previousSentence.toLowerCase())
-  return newPrediction.toLowerCase() === previousSentence.toLowerCase()
+  const normNewPrediction = normalize(newPrediction)
+  const normPreviousSentence = normalize(previousSentence)
+  console.log('NEW_PREDICTION', normNewPrediction)
+  console.log('PREVIOUS_SENTENCE', normPreviousSentence)
+  return normNewPrediction === normPreviousSentence
 }
 
 
