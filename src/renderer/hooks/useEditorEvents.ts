@@ -8,7 +8,7 @@ export const useEditorEvents = (
   setPrediction: (pred: string) => void,
   editorRef: React.RefObject<TiptapEditor>
 ) => {
-  const { getActiveSentenceAndTypedText } = createEditorHelpers()
+  const { getActiveSentance } = createEditorHelpers()
 
   const handleKeyDown = useCallback(
     (view: EditorView, event: KeyboardEvent) => {
@@ -16,9 +16,8 @@ export const useEditorEvents = (
         event.preventDefault()
         const editor = editorRef.current
         
-        const { typedInSentence, activeSentence } = getActiveSentenceAndTypedText(editor)
-        
-        let typed = typedInSentence.replace(/\s+/g, ' ')
+        const activeSentence = getActiveSentance(editor).replace(/\s+/g, ' ')
+    
         let predicted = prediction.replace(/\s+/g, ' ')
 
         const activeSentenceLastWord = activeSentence.split(' ').pop()
@@ -39,10 +38,10 @@ export const useEditorEvents = (
           return true
         }
 
-        const typedEndsWithSpace = typed.endsWith(' ')
+        const typedEndsWithSpace = activeSentence.endsWith(' ')
         const predictedStartsWithSpace = predicted.startsWith(' ')
 
-        const typedWords = typed.trim().split(/\s+/)
+        const typedWords = activeSentence.trim().split(/\s+/)
         const lastTypedWord = typedWords[typedWords.length - 1] || ''
         const predictedWords = predicted.trim().split(/\s+/)
         const firstPredictedWord = predictedWords[0] || ''

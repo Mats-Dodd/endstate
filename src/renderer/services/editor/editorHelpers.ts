@@ -3,8 +3,11 @@ import { EditorHelpers } from './types'
 
 export const createEditorHelpers = (): EditorHelpers => ({
 
-    
-  getActiveSentenceAndTypedText: (editor: TiptapEditor) => {
+  getDocText: (editor: TiptapEditor) => {
+    return editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ')
+  },
+
+  getActiveSentance: (editor: TiptapEditor) => {
     const { from } = editor.state.selection
     const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ')
 
@@ -29,26 +32,37 @@ export const createEditorHelpers = (): EditorHelpers => ({
     }
 
     const activeSentence = docText.slice(sentenceStart, sentenceEnd).trim()
-    const typedInSentence = docText.slice(sentenceStart, from).replace(/\s+/g, ' ')
+    console.log('ACTIVE_SENTENCE', activeSentence)
 
-    return { activeSentence, typedInSentence }
+    return activeSentence
   },
 
-  getPreviousSentence: (editor: TiptapEditor, currentSentenceStart: number): string => {
+  getPreviousSentence: (editor: TiptapEditor): string => {
+
+    const { from } = editor.state.selection
+    let sentenceStart = from
     const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', ' ')
     const sentenceEndings = /[.!?]/
-    let previousSentenceEnd = currentSentenceStart
 
-    while (previousSentenceEnd > 0) {
-      previousSentenceEnd--
-      if (sentenceEndings.test(docText[previousSentenceEnd])) {
+    while (sentenceStart > 0) {
+        if (sentenceEndings.test(docText[sentenceStart - 1])) {
+          sentenceStart++
+          break
+        }
+        sentenceStart--
+      }
+    
+
+    while (sentenceStart > 0) {
+      sentenceStart--
+      if (sentenceEndings.test(docText[sentenceStart])) {
         break
       }
     }
-    if (previousSentenceEnd <= 0) {
+    if (sentenceStart <= 0) {
       return ''
     }
-    let previousSentenceStart = previousSentenceEnd
+    let previousSentenceStart = sentenceStart
     while (previousSentenceStart > 0) {
       previousSentenceStart--
       if (sentenceEndings.test(docText[previousSentenceStart])) {
@@ -57,6 +71,6 @@ export const createEditorHelpers = (): EditorHelpers => ({
       }
     }
 
-    return docText.slice(previousSentenceStart, previousSentenceEnd + 1).trim()
+    return docText.slice(previousSentenceStart, sentenceStart + 1).trim()
   }
 }) 

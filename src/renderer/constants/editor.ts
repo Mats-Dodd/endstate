@@ -2,7 +2,7 @@ import { Color } from '@tiptap/extension-color'
 import ListItem from '@tiptap/extension-list-item'
 import TextStyle from '@tiptap/extension-text-style'
 import StarterKit from '@tiptap/starter-kit'
-import { AIServiceConfig } from '../services/ai/types'
+import { AutoCompletionConfig } from '../services/ai/types'
 
 export const EDITOR_EXTENSIONS = [
   Color,
@@ -26,13 +26,6 @@ export const INITIAL_CONTENT = `
 </p>
 `
 
-export const AI_CONFIG: AIServiceConfig = {
-  model: 'mistral-nemo',
-  options: {
-    model: 'mistral-nemo',
-    temperature: 0.3,
-    top_k: 40,
-    num_predict: 50,
-    stop: ['\n'],
-  }
-} 
+export const AUTO_COMPLETION_MODEL: AutoCompletionConfig = {
+  model: 'phi3:3.8b'
+}

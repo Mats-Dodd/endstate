@@ -13,9 +13,7 @@ export interface EditorState {
 }
 
 export interface EditorHelpers {
-  getActiveSentenceAndTypedText: (editor: TiptapEditor) => {
-    activeSentence: string;
-    typedInSentence: string;
-  };
-  getPreviousSentence: (editor: TiptapEditor, currentSentenceStart: number) => string;
+  getActiveSentance: (editor: TiptapEditor) => string;
+  getPreviousSentence: (editor: TiptapEditor) => string;
+  getDocText: (editor: TiptapEditor) => string;
 } 

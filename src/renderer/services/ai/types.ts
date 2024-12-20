@@ -1,16 +1,8 @@
-export interface AIPredictionOptions {
-  model: string;
-  temperature: number;
-  top_k: number;
-  num_predict: number;
-  stop: string[];
-}
 
 export interface AIPredictionResponse {
   response: string;
 }
 
-export interface AIServiceConfig {
+export interface AutoCompletionConfig {
   model: string;
-  options: AIPredictionOptions;
-} 
+}
