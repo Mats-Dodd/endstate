@@ -19,7 +19,7 @@ export const useAIPrediction = (
     try {
       setError(null)
       const prompt = createPrompt(contextText)
-      // console.log('PROMPT', prompt)
+      console.log('PROMPT', prompt)
       
       const response = await ollama.generate({
         model: AUTO_COMPLETION_MODEL.model,

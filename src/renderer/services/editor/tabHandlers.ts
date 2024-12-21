@@ -36,6 +36,7 @@ const predictionHandler = {
 
   deleteText: (editor: TiptapEditor, indices: [number, number]): boolean => {
     editor.commands.command(({ tr }) => {
+      
       tr.delete(indices[0], indices[1])
       return true
     })
@@ -107,24 +108,18 @@ const predictionHandler = {
     
     const {bestMatch, activeSentenceIndices, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, prediction)
 
-    if (bestMatch && activeSentenceIndices) {
-      // console.log('ACTIVE_SENTENCE_INDICES', activeSentenceIndices)
-      // console.log('BEST_MATCH', bestMatch)
-      const editorText = editor.state.doc.textContent
-      // console.log('EDITOR_TEXT', editorText)
-      const activeSentenceStart = editorText.indexOf(activeSentence)
-      // console.log('ACTIVE_SENTENCE_START', activeSentenceStart)
-
-      const absoluteStartIndex = activeSentenceStart + activeSentenceIndices[0]
-
-      const absoluteEndIndex = activeSentenceStart + activeSentenceIndices[1]
-      activeSentenceIndices[0] = absoluteStartIndex
-      activeSentenceIndices[1] = absoluteEndIndex + 2
-
-      const word_to_delete = editorText.slice(activeSentenceIndices[0], activeSentenceIndices[1])
-      // console.log('WORD_TO_DELETE', word_to_delete)
-      predictionHandler.deleteText(editor, activeSentenceIndices)
+    if (bestMatch && newPredictionIndices) {
+      const beforeMatch = prediction.slice(0, newPredictionIndices[0])
+      const afterMatch = prediction.slice(newPredictionIndices[1] + 1)
+      
+      prediction = beforeMatch + afterMatch
+      
+      prediction = prediction.replace(/\s+/g, ' ').trim()
+      
+      console.log('UPDATED_PREDICTION', prediction)
     }
+
+      
 
 
     return predictionHandler.handleSpacingAndInsertion({ editor, prediction: prediction, setPrediction })
