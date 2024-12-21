@@ -1,5 +1,5 @@
 import { AIPredictionResponse } from './types'
-import { fuzzyMatchSubstring } from '../../utils/stringMatch'
+import { fuzzyMatchSubstring, longestCommonOverlap } from '../../utils/stringMatch'
 import { normalize } from '../../utils/stringMatch'
 
 export const handlePredictionResponse = (
@@ -10,6 +10,7 @@ export const handlePredictionResponse = (
 ) => {
 
   let newPrediction = response.response.trim().replace(/^"|"$/g, '')
+  console.log('NEW_PREDICTION', newPrediction)
   
   if (isPredictionMatchingActiveSentence(newPrediction, activeSentence) ||
       isPredictionMatchingPreviousSentence(newPrediction, previousSentence)) {
@@ -18,8 +19,11 @@ export const handlePredictionResponse = (
   }
 
   const {bestMatch, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, newPrediction)
+  // console.log('BEST_MATCH', bestMatch)
+  const overlap = longestCommonOverlap(activeSentence, newPrediction)
+  // console.log('OVERLAP', overlap)
 
-  console.log('BEST_MATCH', bestMatch)
+  // console.log('BEST_MATCH', bestMatch)
   if (bestMatch && newPredictionIndices && bestMatch !== '') {
       const beforeMatch = newPrediction.slice(0, newPredictionIndices[0])
       const afterMatch = newPrediction.slice(newPredictionIndices[1] + 1)
@@ -27,7 +31,13 @@ export const handlePredictionResponse = (
       newPrediction = beforeMatch + afterMatch
       newPrediction = newPrediction.replace(/\s+/g, ' ').trim()
     }
-
+    else if (overlap && overlap !== '') {
+      newPrediction = newPrediction.slice(overlap.length)
+      // console.log('NEW_PREDICTION', newPrediction)
+    }
+    else {
+      newPrediction = newPrediction
+    }
 
   updatePrediction(newPrediction, setPrediction)
 }
@@ -73,3 +83,5 @@ export const handlePredictionError = (
     }
     clearPrediction(setPrediction)
   }
+
+

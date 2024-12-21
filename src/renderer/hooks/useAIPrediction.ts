@@ -28,7 +28,7 @@ export const useAIPrediction = (
         options: {
           temperature: 0.3,
           top_k: 30,
-          num_predict: 20,
+          num_predict: 3,
           stop: ['.', '!', '?', '\n'],
         }
       })
