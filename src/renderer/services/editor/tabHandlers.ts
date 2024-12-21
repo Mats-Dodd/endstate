@@ -1,22 +1,11 @@
 import { Editor as TiptapEditor } from '@tiptap/core'
 import { createEditorHelpers } from './editorHelpers'
-import { fuzzyMatchSubstring } from '../../utils/stringMatch'
+
 interface TabHandlerParams {
   editor: TiptapEditor
   prediction: string
   setPrediction: (pred: string) => void
 }
-
-
-interface SpacingAdjustmentParams {
-  activeSentanceLastWord: string
-  predictedFirstWord: string
-  predicted: string
-  predictedWords: string[]
-  activeSentanceEndsWithSpace: boolean
-  predictedStartsWithSpace: boolean
-}
-
 
 const predictionHandler = {
   insertTextAndClear: (
@@ -43,56 +32,24 @@ const predictionHandler = {
     return true
   },
 
-
-  adjustSpacing: ({
-    activeSentanceLastWord,
-    predictedFirstWord,
-    predicted,
-    predictedWords,
-    activeSentanceEndsWithSpace,
-    predictedStartsWithSpace
-  }: SpacingAdjustmentParams): string => {
-
-    const typedEndsWithLetter = /[a-zA-Z]$/.test(activeSentanceLastWord)
-    const predictedStartsWithLetter = /^[a-zA-Z]/.test(predictedFirstWord)
-
-    if (typedEndsWithLetter && predictedStartsWithLetter) {
-      predicted = predictedWords.slice(1).join(' ')
-      predicted = predictedFirstWord + (predicted ? ' ' + predicted : '')
-    } else if (activeSentanceEndsWithSpace && predictedStartsWithSpace) {
-      predicted = predicted.replace(/^ +/, '')
-    } else if (!activeSentanceEndsWithSpace && !predictedStartsWithSpace) {
-      predicted = ' ' + predicted
-    }
-
-    return predicted
-  },
-
-  handleSpacingAndInsertion: ({
+  handleSpacing: ({
     editor,
     prediction,
     setPrediction
   }: TabHandlerParams): boolean => {
-    // const { getActiveSentance } = createEditorHelpers()
-    // const activeSentence = getActiveSentance(editor).replace(/\s+/g, ' ')
-    // let predicted = prediction.replace(/\s+/g, ' ')
+    const { getActiveSentance } = createEditorHelpers()
+    const activeSentence = getActiveSentance(editor)
+    
 
-    // const activeSentanceEndsWithSpace = activeSentence.endsWith(' ')
-    // const predictedStartsWithSpace = predicted.startsWith(' ')
+    const activeSentanceEndsWithSpace = activeSentence.endsWith(' ')
+    const predictedStartsWithSpace = prediction.startsWith(' ')
+    console.log('ACTIVE_SENTENCE_ENDS_WITH_SPACE', activeSentanceEndsWithSpace)
+    console.log('PREDICTED_STARTS_WITH_SPACE', predictedStartsWithSpace)
 
-    // const typedWords = activeSentence.trim().split(/\s+/)
-    // const lastTypedWord = typedWords[typedWords.length - 1] || ''
-    // const predictedWords = predicted.trim().split(/\s+/)
-    // const firstPredictedWord = predictedWords[0] || ''
-
-    // predicted = predictionHandler.adjustSpacing({
-    //   activeSentanceLastWord: lastTypedWord,
-    //   predictedFirstWord: firstPredictedWord,
-    //   predicted,
-    //   predictedWords,
-    //   activeSentanceEndsWithSpace,
-    //   predictedStartsWithSpace
-    // })
+    if (activeSentanceEndsWithSpace && predictedStartsWithSpace) {
+        prediction = prediction.replace(/^ +/, '')
+    }
+    
 
     return predictionHandler.insertTextAndClear(editor, prediction, setPrediction)
   },
@@ -104,9 +61,7 @@ const predictionHandler = {
     setPrediction
   }: TabHandlerParams): boolean => { 
       
-
-
-    return predictionHandler.handleSpacingAndInsertion({ editor, prediction: prediction, setPrediction })
+    return predictionHandler.handleSpacing({ editor, prediction: prediction, setPrediction })
   }
 }
 

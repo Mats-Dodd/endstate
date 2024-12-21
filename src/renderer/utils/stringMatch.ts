@@ -101,8 +101,8 @@ export const longestCommonOverlap = (currentSentence: string, prediction: string
   }
 
   const remainder = predictionWords.slice(i).join(' ')
-  console.log('REMAINDER', remainder)
-  console.log('CURRENT_SENTENCE', currentSentence)
+  // console.log('REMAINDER', remainder)
+  // console.log('CURRENT_SENTENCE', currentSentence)
   if (currentSentence.includes(remainder)) {
     return remainder
   }

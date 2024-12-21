@@ -31,7 +31,7 @@ export const createEditorHelpers = (): EditorHelpers => ({
       sentenceEnd++
     }
 
-    const activeSentence = docText.slice(sentenceStart, sentenceEnd).trim()
+    const activeSentence = docText.slice(sentenceStart, sentenceEnd)
 
     return activeSentence
   },
@@ -50,8 +50,6 @@ export const createEditorHelpers = (): EditorHelpers => ({
         }
         sentenceStart--
       }
-    
-
     while (sentenceStart > 0) {
       sentenceStart--
       if (sentenceEndings.test(docText[sentenceStart])) {
@@ -69,7 +67,6 @@ export const createEditorHelpers = (): EditorHelpers => ({
         break
       }
     }
-
     return docText.slice(previousSentenceStart, sentenceStart + 1).trim()
   }
 }) 
