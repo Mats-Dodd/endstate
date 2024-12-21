@@ -103,22 +103,6 @@ const predictionHandler = {
     prediction,
     setPrediction
   }: TabHandlerParams): boolean => { 
-    const { getActiveSentance } = createEditorHelpers()
-    const activeSentence = getActiveSentance(editor).replace(/\s+/g, ' ')
-    
-    const {bestMatch, activeSentenceIndices, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, prediction)
-
-    if (bestMatch && newPredictionIndices) {
-      const beforeMatch = prediction.slice(0, newPredictionIndices[0])
-      const afterMatch = prediction.slice(newPredictionIndices[1] + 1)
-      
-      prediction = beforeMatch + afterMatch
-      
-      prediction = prediction.replace(/\s+/g, ' ').trim()
-      
-      console.log('UPDATED_PREDICTION', prediction)
-    }
-
       
 
 

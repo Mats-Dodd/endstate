@@ -27,5 +27,5 @@ export const INITIAL_CONTENT = `
 `
 
 export const AUTO_COMPLETION_MODEL: AutoCompletionConfig = {
-  model: 'phi3:3.8b'
+  model: 'phi3.5:3.8b-mini-instruct-q4_K_S'
 }

@@ -9,7 +9,7 @@ export const handlePredictionResponse = (
   setPrediction: (pred: string) => void
 ) => {
 
-  const newPrediction = response.response.trim().replace(/^"|"$/g, '')
+  let newPrediction = response.response.trim().replace(/^"|"$/g, '')
   
   if (isPredictionMatchingActiveSentence(newPrediction, activeSentence) ||
       isPredictionMatchingPreviousSentence(newPrediction, previousSentence)) {
@@ -17,7 +17,16 @@ export const handlePredictionResponse = (
     return
   }
 
-  const {bestMatch, activeSentenceIndices, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, newPrediction)
+  const {bestMatch, newPredictionIndices} = fuzzyMatchSubstring(activeSentence, newPrediction)
+
+  console.log('BEST_MATCH', bestMatch)
+  if (bestMatch && newPredictionIndices && bestMatch !== '') {
+      const beforeMatch = newPrediction.slice(0, newPredictionIndices[0])
+      const afterMatch = newPrediction.slice(newPredictionIndices[1] + 1)
+      
+      newPrediction = beforeMatch + afterMatch
+      newPrediction = newPrediction.replace(/\s+/g, ' ').trim()
+    }
 
 
   updatePrediction(newPrediction, setPrediction)

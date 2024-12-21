@@ -7,7 +7,7 @@ export const createPrompt = (contextText: string): string => {
 
   const prompt = `
   <purpose>
-    You are an expert writing assistant, help the user complete the sentance from the <CURSOR> tag.
+    You are an expert writing assistant, help the user complete the sentance that is in the <current_sentence> tag.
   </purpose>
 
   <instructions>
@@ -25,6 +25,9 @@ export const createPrompt = (contextText: string): string => {
     </instruction>
     <instruction>
       If the <CURSOR> Is alone by itself in <current_sentence> tag, This means the user has not typed anything yet, predict the next few words of the sentence to help them get started.
+    </instruction>
+    <instruction>
+      Make sure that your response is coherent with the <previous_context> and <following_context>.
     </instruction>
   </instructions>
 
